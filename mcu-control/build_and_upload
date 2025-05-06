@@ -1,0 +1,1 @@
+cargo objcopy --release -- -O binary blue-pill.bin && ls -la /dev/ttyUSB0 && sudo stm32flash -R -b 230400 -w blue-pill.bin -v /dev/ttyUSB0
