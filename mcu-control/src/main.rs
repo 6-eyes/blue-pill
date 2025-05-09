@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod bno055;
+
 use panic_halt as _;
 use cortex_m_rt::entry;
 use stm32f1xx_hal::{pac, prelude::*, serial::{Config, Serial}, timer::Timer};

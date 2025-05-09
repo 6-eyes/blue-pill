@@ -7,6 +7,7 @@ edition = "2024"
 cortex-m-rt = "0.7.5"
 panic-halt = "1.0.0"
 nb = "1.1.0"
+embedded-hal = "1.0.0"
 
 [dependencies.stm32f1xx-hal]
 version = "0.10.0"
