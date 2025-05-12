@@ -3,9 +3,10 @@
 
 mod bno055;
 
+use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use cortex_m_rt::entry;
-use stm32f1xx_hal::{i2c::{BlockingI2c, DutyCycle, Mode}, pac::{self, DWT}, prelude::*, serial::{Config, Serial}, timer::Timer};
+use stm32f1xx_hal::{i2c::{BlockingI2c, DutyCycle, Mode}, pac::{self, DWT}, prelude::*, serial::Config, timer::{delay, SysDelay, Timer}};
 
 #[entry]
 fn main() -> ! {
@@ -13,7 +14,6 @@ fn main() -> ! {
     let mut cp = pac::CorePeripherals::take().unwrap();
     // device peripherals
     let dp = pac::Peripherals::take().unwrap();
-    let mut afio = dp.AFIO.constrain();
 
     let mut flash = dp.FLASH.constrain();
     let rcc = dp.RCC.constrain();
@@ -29,11 +29,12 @@ fn main() -> ! {
         let mut gpioa = dp.GPIOA.split();
         let tx = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
         let rx = gpioa.pa10;
-        let serial = Serial::new(dp.USART1, (tx, rx), &mut afio.mapr, Config::default().baudrate(115200.bps()), &clocks);
+        let serial = dp.USART1.serial((tx, rx), Config::default().baudrate(115200.bps()), &clocks);
         serial.split()
     };
 
     DWT::enable_cycle_counter(&mut cp.DWT);
+
     let i2c = {
         let mut gpiob = dp.GPIOB.split();
         let scl = gpiob.pb6.into_alternate_open_drain(&mut gpiob.crl);
@@ -44,10 +45,14 @@ fn main() -> ! {
             duty_cycle: DutyCycle::Ratio16to9,
         };
 
-        BlockingI2c::i2c1(dp.I2C1, (scl, sda), &mut afio.mapr, mode, clocks, 1000, 10, 1000, 1000)
+        BlockingI2c::new(dp.I2C1, (scl, sda), mode, &clocks, 1000, 10, 1000, 1000)
     };
 
-    let mut bno055 = bno055::Bno055::new(i2c);
+    let mut bno055 = {
+        let mut bno055 = bno055::Bno055::new(i2c);
+        bno055
+    };
+    let temp = bno055.temperature();
 
     let mut timer = Timer::syst(cp.SYST, &clocks).counter_hz();
     timer.start(1.Hz()).unwrap();
